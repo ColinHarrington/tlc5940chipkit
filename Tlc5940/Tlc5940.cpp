@@ -255,6 +255,10 @@ void Tlc5940::setAll(int value){
 	}
 }
 
+int Tlc5940::getNumTLCs(){
+	return NUM_TLCS;
+}
+
 #if RGB_ENABLED
 
 // RGB LEDs are connected to the TLC sequentially

@@ -15,14 +15,17 @@ class Tlc5940
     //int get(int channel);
 	void setAll(int value);
 	int needxlat(void);
+	int getNumTLCs();
+	void setRGB1(int channel, int r, int g, int b);
+	void setRGB2(int channel, int r, int g, int b);
+	
+
 #if VPRG_ENABLED
 	void setAllDC(uint8_t value);
     //void setAllDC(uint8_t r, uint8_t g, uint8_t b);
     //void setAllDCtest(uint8_t r, uint8_t g, uint8_t b);
 #endif
 
-	void setRGB1(int channel, int r, int g, int b);
-	void setRGB2(int channel, int r, int g, int b);
 #if XERR_ENABLED
     uint8_t readXERR(void);
 #endif

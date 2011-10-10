@@ -179,6 +179,12 @@ int Tlc5940::update(void)
     \see get */
 void Tlc5940::set(int channel, int value)
 {
+	if (channel < 0 || channel > NUM_TLCS*16){
+		return;
+	}
+	if (value < 0 || value > 4095){
+		return;
+	}
 	// Data is packed into tlc_GSData as pictured below. 
 	// Each letter represents 4 bits and the last channel is stored first. 
 	// So |A|A|A| would be the 12-bit value of the last TLC channel

@@ -12,7 +12,7 @@ class Tlc5940
 	void clear(void);
 	int update(void);
 	void set(int channel, int value);
-    //int get(int channel);
+	int get(int channel);
 	void setAll(int value);
 	int needxlat(void);
 	int getNumTLCs();

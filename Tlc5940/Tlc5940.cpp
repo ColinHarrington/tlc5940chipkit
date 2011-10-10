@@ -261,10 +261,6 @@ void Tlc5940::setAll(int value){
 	}
 }
 
-int Tlc5940::getNumTLCs(){
-	return NUM_TLCS;
-}
-
 #if RGB_ENABLED
 
 // RGB LEDs are connected to the TLC sequentially
@@ -290,6 +286,54 @@ void Tlc5940::setRGB2(int channel, int r, int g, int b){
 	set(tlc_channel, b);
 }
 #endif
+
+
+
+int Tlc5940::getNumTLCs(){
+	return NUM_TLCS;
+}
+
+
+/** The logic here is almost identical to the set function which is well documented */
+int Tlc5940::get(int channel){
+
+	unsigned int index32 = (NUM_TLCS * 16 - 1) - channel;
+	unsigned int *index12p = tlc_GSData + ((index32 * 3) >> 3);
+	int caseNum = index32 % 8;
+	int value = 0;
+	
+	switch(caseNum){
+		case 0:
+			value |= (*index12p >> 20) & 0xFFF;
+			break;
+		case 1:
+			value |= (*index12p >> 8) & 0xFFF;
+			break;
+		case 2:
+			value |= (*index12p << 4) & 0xFF0;
+			index12p++;
+			value |= (*index12p >> 28) & 0xF;
+			break;
+		case 3:
+			value |= (*index12p >> 16) & 0xFFF;
+			break;
+		case 4:
+			value |= (*index12p >> 4) & 0xFFF;
+			break;
+		case 5:
+			value |= (*index12p << 8) & 0xF00;
+			index12p++;
+			value |= (*index12p >> 24) & 0xFF;
+			break;
+		case 6:
+			value |= (*index12p >> 12) & 0xFFF;
+			break;
+		case 7:
+			value |= *index12p & 0xFFF;
+			break;
+	}
+	return value;
+}
 
 
 

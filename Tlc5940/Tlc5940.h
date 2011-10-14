@@ -1,6 +1,6 @@
 #ifndef TLC5940_H
 #define TLC5940_H
-
+#include <config.h>
 #include <stdint.h>
 
 //extern unsigned int tlc_GSData[NUM_TLCS * 6];
@@ -14,14 +14,18 @@ class Tlc5940
 	void set(int channel, int value);
 	int get(int channel);
 	void setAll(int value);
-	int needxlat(void);
+	int updateInProgress(void);
 	int getNumTLCs();
 	void setRGB1(int channel, int r, int g, int b);
 	void setRGB2(int channel, int r, int g, int b);
 	
 
 #if VPRG_ENABLED
-	void setAllDC(uint8_t value);
+	void setAllDC(int value);
+	void setDC(int channel, int value);
+	int getDC(int channel);
+	int updateDC();
+	uint8_t* getDCData();
     //void setAllDC(uint8_t r, uint8_t g, uint8_t b);
     //void setAllDCtest(uint8_t r, uint8_t g, uint8_t b);
 #endif

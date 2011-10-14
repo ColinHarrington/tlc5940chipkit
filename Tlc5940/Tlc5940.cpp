@@ -1,27 +1,16 @@
-#include <plib.h>
+#include <config.h>
 #include "Tlc5940.h"
+#include <plib.h>
 
-/** specify the number of TLC5940 chips that are connected */
-#define NUM_TLCS 1
 
-/** Bit-bang using any two i/o pins */
-#define TLC_BITBANG        1
-/** Use the much faster hardware SPI module */
-#define TLC_SPI            2
 
-#define RGB_ENABLED			1 // use this to include/exclude the RGB helper functions
+/** Macros to work with pins */
+#define pulse_pin(port, pin)		port |= pin; port &= ~pin
+#define setLow(port, pin)		port &= ~pin
+#define setHigh(port, pin)		port |= pin;
+#define outputState(port, pin)	port & pin
 
-/** Determines how data should be transfered to the TLCs.  Bit-banging can use
-    any two i/o pins, but the hardware SPI is faster.
-    - Bit-Bang = TLC_BITBANG --> *NOT YET WORKING* 
-    - Hardware SPI = TLC_SPI (default) */
-#define DATA_TRANSFER_MODE TLC_SPI
-//#define DATA_TRANSFER_MODE TLC_BITBANG
-
-/** Pulses a pin - high then low. */
-#define pulse_pin(port, pin)   port |= pin; port &= ~ pin
-
-/** Ports **/
+/** Chipkit Ports **/
 #define VPRG 0x2
 #define VPRG_PORT PORTF
 
@@ -58,11 +47,24 @@
           the array is the same as the format of the TLC's serial interface. */
 unsigned int tlc_GSData[NUM_TLCS * 6]; // 6 * 32 = 192 bits = 16x 12bit values
 
+
+#if VPRG_ENABLED
+
+/** Packed Dot Correction data. Packed similarly to GSData. Using an 8 bit uint because it's easier to pack. */
+uint8_t tlc_DCData[NUM_TLCS * 12];
+#endif 
+
 /** This will be true (!= 0) if update was just called and the data has not
     been latched in yet. */
 volatile uint8_t tlc_needXLAT;
 
-int Tlc5940::needxlat() 
+/** Some of the extened library will need to be called after a successful
+    update. */
+volatile void (*tlc_onUpdateFinished)(void);
+
+
+/** Returns > 0 if an update is currently in progress; else 0 */
+int Tlc5940::updateInProgress() 
 {
 	return tlc_needXLAT;
 }
@@ -76,9 +78,6 @@ void Tlc5940::init(int initialValue)
 	TRISDCLR = GSCLK;
 	TRISDCLR = BLANK;
 	TRISDCLR = XLAT;
-
-	// Turn on VPRG because Heath is testing interrupts
-	//VPRG_PORT |= VPRG;
 	
 	#if DATA_TRANSFER_MODE == TLC_BITBANG
 
@@ -130,7 +129,6 @@ void Tlc5940::clear(void)
 // THIS FUNCTION IS CURRENTLY A BUCKET OF FAAAAAAAAAIL
 int Tlc5940::update(void)
 {
-	pulse_pin(SCLK_PORT, SCLK);
 	
 	for(int i = 0; i < (NUM_TLCS * 6); i++) {
 		for(int s = 31; s >= 0; s--)
@@ -154,19 +152,20 @@ int Tlc5940::update(void)
 
 int Tlc5940::update(void)
 {
+	// We CANNOT use SOUT/SCLK while XLAT is high - tampering with the data while it's being latched is a BAD idea
 	if (tlc_needXLAT){
-		return 1;
+		return 1; 
 	}
-	pulse_pin(SCLK_PORT, SCLK);
 	
-	//TODO use Interrupt driven SPI for a non-blocking performance boost
-	putsSPI2(6 * NUM_TLCS, tlc_GSData);
+	//TODO use Interrupt driven SPI for a non-blocking performance boost - this could get tricky when mixed with DC updates
+	putsSPI2(6*NUM_TLCS, tlc_GSData);
 
+	// Wait for buffers to be emptied
 	while(SpiChnIsBusy(SPI_CHANNEL2));
 
 	request_xlat_pulse();
 	
-    return 0;
+	return 0;
 }
 
 #endif
@@ -337,6 +336,108 @@ int Tlc5940::get(int channel){
 
 
 
+#if VPRG_ENABLED
+
+void Tlc5940::setDC(int channel, int value){
+
+	uint8_t index8 = (NUM_TLCS * 16 -1) - channel;
+	uint8_t *index6p = tlc_DCData + ((index8 * 3) >> 2);	// index * 3 / 4 = which array element the bits start it
+	int caseNum = index8 % 4; 
+	
+	switch(caseNum){
+		case 0:
+			*index6p = (*index6p & 0x03) | value << 2;
+			break;
+		case 1:
+			*index6p = (*index6p & 0xFC) | value >> 4;
+			index6p++;
+			*index6p = (*index6p & 0x0F) | value << 4;
+			break;
+		case 2:
+			*index6p = (*index6p & 0xF0) | value >> 2;
+			index6p++;
+			*index6p = (*index6p & 0x3F) | value << 6;
+			break;
+		case 3:
+			*index6p = (*index6p & 0xC0) | value;
+			break;
+	}
+}
+
+void Tlc5940::setAllDC(int value){
+	for (int i=0; i<NUM_TLCS; i++){
+		setDC(i, value);
+	}
+}
+
+
+int Tlc5940::getDC(int channel){
+
+	uint8_t index8 = (NUM_TLCS * 16 -1) - channel;
+	uint8_t *index6p = tlc_DCData + ((index8 * 3) >> 2);	// index * 3 / 4 = which array element the bits start it
+	int caseNum = index8 % 4; 
+	int value = 0;
+	
+	switch (caseNum){
+		case 0:
+			value |= (*index6p >> 2) & 0x3F;
+			break;
+		case 1:
+			value |= (*index6p << 4) & 0x30;
+			index6p++;
+			value |= (*index6p >> 4) & 0x0F;
+			break;
+		case 2:
+			value |= (*index6p << 2) & 0x3C;
+			index6p++;
+			value |= (*index6p >> 6) & 0x03;
+			break;
+		case 3:
+			value |= (*index6p & 0x3F);
+			break;
+	}
+	return value;
+}
+
+/** Send the bits for Dot Correction to the TLC*/
+int Tlc5940::updateDC(){
+
+	// if needXLAT, there is already an update in process
+	if (tlc_needXLAT){
+		return 1;
+	}
+
+
+	// Set VPRG High to switch to DC programming mode
+	setHigh(VPRG_PORT, VPRG);
+		
+	// SPI didn't work out so well since I'm using an array of uint8_t
+	// So let's try bit banging
+	for(int i = 0; i < (NUM_TLCS * 12); i++) {
+		for(int s = 7; s >= 0; s--)
+		{
+			if(tlc_DCData[i] >> s & 0x1) {
+				setHigh(SOUT_PORT, SOUT);
+			} else {
+				setLow(SOUT_PORT, SOUT);
+			}
+			
+			pulse_pin(SCLK_PORT, SCLK);
+		}
+	}
+	request_xlat_pulse();
+
+	return 0;
+}
+
+uint8_t* Tlc5940::getDCData(){
+	return tlc_DCData;
+}
+#endif
+
+
+
+
 /**
 Triggering XLAT starts with enabling the Blank interrrupt
 this interrupt will fire after BLANK is pulsed
@@ -345,6 +446,10 @@ After XLAT is pulsed the XLAT Interrupt fires
 which resets the need_XLAT flag and causes the XLAT pulse time to be set out of range 
 (so that neither the pin or the interrupt with be fired)
 
+We may be wasting some time waiting for the first blank cycle, then waiting for the second,
+but at least this way we have an entire cycle to setup the XLAT pulse. If we decided to just
+setup XLAT immediately, we would run the risk of setting XLAT right in the middle of when
+it was supposed to be checked and we could run into some nasty race conditions. 
 */
 void Tlc5940::request_xlat_pulse(){
 
@@ -380,6 +485,16 @@ extern "C"	// So c++ doesn't mangle the function names
 		tlc_needXLAT = 0;
 			
 		mOC4ClearIntFlag();
+
+		// If VPRG is High, then we just programmed DC
+		if (outputState(VPRG_PORT, VPRG)){
+			setLow(VPRG_PORT, VPRG);
+			pulse_pin(SCLK_PORT, SCLK);
+		}
+		
+		if (tlc_onUpdateFinished) {
+		    tlc_onUpdateFinished();
+		}
 	}
 
 #ifdef __cplusplus

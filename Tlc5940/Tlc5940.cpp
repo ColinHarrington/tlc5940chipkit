@@ -160,7 +160,7 @@ int Tlc5940::update(void)
 	pulse_pin(SCLK_PORT, SCLK);
 	
 	//TODO use Interrupt driven SPI for a non-blocking performance boost
-	putsSPI2(6*NUM_TLCS, tlc_GSData);
+	putsSPI2(6 * NUM_TLCS, tlc_GSData);
 
 	while(SpiChnIsBusy(SPI_CHANNEL2));
 

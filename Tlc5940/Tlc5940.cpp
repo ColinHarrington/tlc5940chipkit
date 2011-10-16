@@ -83,7 +83,13 @@ void Tlc5940::init(int initialValue)
 
 	#elif DATA_TRANSFER_MODE == TLC_SPI
 	//Setting up SPI
-	OpenSPI2(SPI_MODE32_ON|MASTER_ENABLE_ON|SPI_CKE_ON|PRI_PRESCAL_1_1|FRAME_ENABLE_OFF, SPI_ENABLE);
+	OpenSPI2(
+			SPI_MODE32_ON
+			| MASTER_ENABLE_ON 
+			| SPI_CKE_ON 
+			| TLC_SPI_PRESCALER_FLAGS 
+			| FRAME_ENABLE_OFF, 
+		SPI_ENABLE);
 	#endif
 	
 	// Start the timer for GSCLK

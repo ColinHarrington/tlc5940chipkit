@@ -8,6 +8,10 @@
 /** Use the much faster hardware SPI module */
 #define TLC_SPI            2
 
+#ifndef TLC_SPI_PRESCALER_FLAGS
+	#define TLC_SPI_PRESCALER_FLAGS PRI_PRESCAL_4_1|SEC_PRESCAL_4_1
+#endif
+
 /** use this to include/exclude the RGB helper functions */
 #ifndef RGB_ENABLED
 	#define RGB_ENABLED			1 

@@ -93,10 +93,10 @@ void Tlc5940::init(int initialValue)
 	#endif
 	
 	// Start the timer for GSCLK
-	OpenTimer2(T2_ON | T2_PS_1_1, 0x3);
+	OpenTimer2(T2_ON | T2_PS_1_4, 0x3);
 
 	// Start the timer for BLANK/XLAT
-	OpenTimer3(T3_ON | T3_PS_1_4, 0x1003);
+	OpenTimer3(T3_ON | T3_PS_1_16, 0x1003);
 	
 	// Start the OC for BLANK
 	OpenOC5(OC_ON | OC_TIMER3_SRC | OC_CONTINUE_PULSE, 0x3, 0x0);

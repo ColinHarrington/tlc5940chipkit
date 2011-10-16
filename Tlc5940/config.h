@@ -1,6 +1,6 @@
 /** specify the number of TLC5940 chips that are connected */
 #ifndef NUM_TLCS
-	#define NUM_TLCS				2
+	#define NUM_TLCS				1
 #endif
 /** Bit-bang using any two i/o pins */
 #define TLC_BITBANG			1

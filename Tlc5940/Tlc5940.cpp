@@ -1,4 +1,4 @@
-#include <config.h>
+#include <tlc_config.h>
 #include "Tlc5940.h"
 #include <plib.h>
 

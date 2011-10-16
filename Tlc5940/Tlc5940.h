@@ -1,6 +1,6 @@
 #ifndef TLC5940_H
 #define TLC5940_H
-#include <config.h>
+#include <tlc_config.h>
 #include <stdint.h>
 
 //extern unsigned int tlc_GSData[NUM_TLCS * 6];

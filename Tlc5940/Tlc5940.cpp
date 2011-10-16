@@ -116,7 +116,7 @@ void Tlc5940::init(int initialValue)
 	while(tlc_needXLAT);
 
 	// Start the OC for GSCLK
-	OpenOC1(OC_ON | OC_TIMER2_SRC | OC_PWM_FAULT_PIN_DISABLE, 0x2, 0x2);	
+	OpenOC1(OC_ON | OC_TIMER2_SRC | OC_PWM_FAULT_PIN_DISABLE, 0x1, 0x1);	
 
 }
 

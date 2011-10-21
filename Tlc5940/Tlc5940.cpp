@@ -185,7 +185,7 @@ int Tlc5940::update(void)
     \see get */
 void Tlc5940::set(int channel, int value)
 {
-	if (channel < 0 || channel > NUM_TLCS*16){
+	if (channel < 0 || channel >= NUM_TLCS*16){
 		return;
 	}
 	if (value < 0 || value > 4095){
